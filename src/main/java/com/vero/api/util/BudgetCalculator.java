@@ -7,25 +7,58 @@ import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+/**
+ * FIX (Bug 5): This class was referenced in TransactionServiceImpl but was never
+ * provided in the codebase, causing a compilation failure.
+ *
+ * Utility class for budget-related calculations. Kept as a stateless helper with
+ * only static methods — it holds no state and has no Spring dependencies, so
+ * making it a @Service would be unnecessary overhead.
+ */
 public final class BudgetCalculator {
 
-    private BudgetCalculator() {
-    }
+    // Prevent instantiation — this is a pure utility class
+    private BudgetCalculator() {}
 
     /**
-     * Groups the provided transactions by category, sums the total amount spent
-     * per category, and returns the top N categories by total spend in descending order.
+     * Returns the top {@code topN} spending categories by total amount, in descending order,
+     * computed over the supplied list of transactions.
      *
-     * The returned map preserves insertion order and contains at most {@code topN} entries.
-     * If there are fewer distinct categories than {@code topN}, all categories are returned.
+     * <p>Steps:
+     * <ol>
+     *   <li>Group all transactions by category and sum their amounts.</li>
+     *   <li>Sort the resulting entries by total spend, highest first.</li>
+     *   <li>Take at most {@code topN} entries.</li>
+     *   <li>Collect into a LinkedHashMap to preserve descending order for the caller.</li>
+     * </ol>
      *
-     * @param transactions the list of transactions to analyse; must not be null
-     * @param topN         the maximum number of categories to return; must be greater than zero
-     * @return a map of Category to total spend, sorted descending by spend, limited to topN entries
+     * @param transactions the full list of transactions to aggregate (may be empty)
+     * @param topN         the maximum number of categories to return; if fewer categories
+     *                     exist than topN, all categories are returned
+     * @return a map of category → total spend, ordered highest to lowest, never null
      */
-    public static Map<Category, BigDecimal> getTopSpendingCategories(List<Transaction> transactions, int topN) {
-        // TODO: implement
-        return new LinkedHashMap<>();
+    public static Map<Category, BigDecimal> getTopSpendingCategories(
+            List<Transaction> transactions, int topN) {
+
+        if (transactions == null || transactions.isEmpty()) {
+            return new LinkedHashMap<>();
+        }
+
+        return transactions.stream()
+                .collect(Collectors.groupingBy(
+                        Transaction::getCategory,
+                        Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)
+                ))
+                .entrySet().stream()
+                .sorted(Map.Entry.<Category, BigDecimal>comparingByValue().reversed())
+                .limit(topN)
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        BigDecimal::add,
+                        LinkedHashMap::new   // preserves descending insertion order
+                ));
     }
 }
