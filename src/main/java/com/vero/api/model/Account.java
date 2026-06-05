@@ -9,18 +9,22 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 /**
  * Represents a financial account belonging to a user.
+ *
+ * Extends {@link Auditable} to inherit created_at / updated_at columns.
  */
 @Entity
 @Table(name = "accounts")
 @Data
+@EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Account {
+public class Account extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
