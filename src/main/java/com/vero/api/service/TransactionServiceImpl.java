@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,10 +36,18 @@ public class TransactionServiceImpl implements TransactionService {
         return repository.findByAccountId(accountId);
     }
 
+    /**
+     * FIX (Bug 3): Was returning Collections.emptyList() unconditionally (TODO stub).
+     * Now correctly filters all transactions whose date falls within [startDate, endDate] inclusive.
+     * Note: findAll() is acceptable at current scale; consider adding a
+     * findByTransactionDateBetween() repository method as data grows.
+     */
     @Override
     public List<Transaction> getTransactionsByDateRange(LocalDate startDate, LocalDate endDate) {
-        // TODO: implement date range filtering
-        return Collections.emptyList();
+        return repository.findAll().stream()
+                .filter(t -> !t.getTransactionDate().isBefore(startDate)
+                          && !t.getTransactionDate().isAfter(endDate))
+                .toList();
     }
 
     @Override
@@ -60,14 +67,19 @@ public class TransactionServiceImpl implements TransactionService {
         repository.deleteById(id);
     }
 
+    /**
+     * FIX (Bug 1): The original filter used .isAfter(startOfMonth) which excluded
+     * transactions dated on the 1st of the month (an off-by-one error).
+     * Fixed to use !isBefore(startOfMonth) so the boundary is inclusive on both ends.
+     */
     @Override
     public Map<Category, BigDecimal> calculateMonthlySpend(int year, int month) {
         LocalDate startOfMonth = LocalDate.of(year, month, 1);
         LocalDate endOfMonth = startOfMonth.withDayOfMonth(startOfMonth.lengthOfMonth());
 
         return repository.findAll().stream()
-                .filter(t -> t.getTransactionDate().isAfter(startOfMonth)
-                        && !t.getTransactionDate().isAfter(endOfMonth))
+                .filter(t -> !t.getTransactionDate().isBefore(startOfMonth)
+                          && !t.getTransactionDate().isAfter(endOfMonth))
                 .collect(Collectors.groupingBy(
                         Transaction::getCategory,
                         Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)
@@ -79,6 +91,11 @@ public class TransactionServiceImpl implements TransactionService {
         return BudgetCalculator.getTopSpendingCategories(transactions, topN);
     }
 
+    /**
+     * FIX (Bug 2): Was calling repository.findByCategoryAndMonth() which did not exist,
+     * causing a startup failure. Now delegates to the correctly declared @Query method
+     * added to TransactionRepository.
+     */
     public List<Transaction> getCategoryTransactionsForMonth(Category category, int year, int month) {
         return repository.findByCategoryAndMonth(category, year, month);
     }
