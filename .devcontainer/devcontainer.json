@@ -1,0 +1,44 @@
+{
+  "name": "Vero API",
+  "image": "mcr.microsoft.com/devcontainers/java:3-17-bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "none",
+      "installMaven": "true",
+      "installGradle": "false"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vmware.vscode-boot-dev-pack",
+        "redhat.vscode-xml"
+      ],
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic",
+        "java.compile.nullAnalysis.mode": "automatic",
+        "java.server.launchMode": "Standard"
+      }
+    }
+  },
+
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Vero API",
+      "onAutoForward": "notify"
+    }
+  },
+
+  "postCreateCommand": "chmod +x ./mvnw && ./mvnw -B -q dependency:go-offline || true",
+
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "4gb"
+  },
+
+  "remoteUser": "vscode"
+}
