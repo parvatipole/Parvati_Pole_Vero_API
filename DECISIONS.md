@@ -313,5 +313,4 @@ correct without running it, I don't submit it.
  
 The `findAll()` + in-memory filter pattern in `calculateMonthlySpend`. It is
 functionally correct for small datasets but will load an unbounded number of rows into
-memory on every request as the table grows. This is the kind of bug that passes all
-tests, works fine in development, and causes an OOM incident in production at 3am.
+memory on every request as the table grows. 
